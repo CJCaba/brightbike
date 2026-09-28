@@ -1,4 +1,5 @@
 export type Direction = 'up' | 'down' | 'left' | 'right';
+
 export interface Vec {
   x: number;
   y: number;
