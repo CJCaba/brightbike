@@ -1,0 +1,16 @@
+export const CELL_SIZE = 10;    // CSS pixels per grid cell -> 80x50 grid = 800x500px
+
+export const COLORS = {
+  background: '#05070d',
+  gridLine:   'rgba(0, 229, 255, 0.06)',
+  border:     'rgba(0, 229, 255, 0.5)',
+} as const;
+
+export const BIKE_COLORS: Record<number, string> = {
+  1: '#448AFF',
+  2: '#FF5252',
+  3: '#69F0AE',
+  4: '#FFD740',
+};
+
+export const FALLBACK_TRAIL_COLOR = '#888'  // Any id without a color (e.g. test walls use id 9)
