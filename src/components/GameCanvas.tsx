@@ -1,19 +1,27 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
+import type { Phase } from '@/game/phase';
+import { createControllers, type GameMode } from '@/game/modes'
 import { createGame, startGame } from '@/engine/createGame';
 import type { GameState } from '@/engine/types';
 import { GRID_WIDTH, GRID_HEIGHT, TICKS_PER_SECOND } from '@/engine/constants';
 import { CELL_SIZE } from '@/render/theme';
 import { createGridLayer, drawGame } from '@/render/drawGame';
 import { tick } from '@/engine/tick';
-import { ARROWS, WASD } from '@/controllers/keymaps';
-import { KeyboardController } from '@/controllers/KeyboardController';
-import { collectInputs, type Controller } from '@/controllers/Controller';
+import { collectInputs } from '@/controllers/Controller';
 
-export default function GameCanvas() {
+interface Props {
+    mode: GameMode;
+    onPhaseChange: (phase: Phase) => void;
+}
+
+export default function GameCanvas({ mode, onPhaseChange }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const stateRef = useRef<GameState | null>(null);
+    const emit = useEffectEvent((phase: Phase) => {
+        onPhaseChange(phase);
+    });
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -22,9 +30,7 @@ export default function GameCanvas() {
         if (!ctx) return;
 
         // 1. Create state once
-        stateRef.current ??= startGame(
-            createGame({width: GRID_WIDTH, height: GRID_HEIGHT, tickRate: TICKS_PER_SECOND})
-        );
+        stateRef.current ??= createGame({width: GRID_WIDTH, height: GRID_HEIGHT, tickRate: TICKS_PER_SECOND});
 
         // 2. Size the canvas for the sceen's pixel density
         const dpr = window.devicePixelRatio || 1;
@@ -40,36 +46,51 @@ export default function GameCanvas() {
         const gridLayer = createGridLayer(GRID_WIDTH, GRID_HEIGHT, dpr);
 
         // 4. Controllers - created INSIDE the effect so cleanup can dispose exactly these
-        const controllers: Controller[] = [
-            new KeyboardController(1, WASD),
-            new KeyboardController(2, ARROWS)
-        ];
+        const controllers = createControllers(mode);
 
         // 5. Fixed-timestep loop
         const STEP_MS = 1000 / TICKS_PER_SECOND;
+        const COUNTDOWN_MS = 3000;
+        const startAt = performance.now() + COUNTDOWN_MS;
         const MAX_FRAME_MS = 250;
+        let shownCount = 0;                                 // Last countdown number sent to the UI
         let last = performance.now();
         let acc = 0;
         let rafId = 0;
 
         const frame = (now: number) => {
-            acc += Math.min(now - last, MAX_FRAME_MS);
-            last = now;
+            const current = stateRef.current!;
+            if (current.status === 'waiting') {
+                // Countdown: no ticks, just time
+                const remaining = Math.ceil((startAt - now) / 1000);
+                if (remaining <= 0) {
+                    stateRef.current = startGame(current);
+                    emit({ kind: 'playing'});
+                } else if (remaining !== shownCount) {
+                    shownCount = remaining;
+                    emit({ kind: 'countdown', n: remaining });
+                }
+                last = now;
+            } else {
+                // Playing: advance the simulation
+                acc += Math.min(now - last, MAX_FRAME_MS);
+                last = now;
 
-            while (acc >= STEP_MS) {
-                // Update game state: one tick per full step of elapsed time
-                const current = stateRef.current!;
-                stateRef.current = tick(current, collectInputs(controllers, current));
-                acc -= STEP_MS;
+                while (acc >= STEP_MS) {
+                    // Update game state: one tick per full step of elapsed time
+                    const prev = stateRef.current!;
+                    stateRef.current = tick(prev, collectInputs(controllers, prev));
+                    acc -= STEP_MS;
+                }
             }
 
-            // Draw the current state
+            // Draw the state AFTER this frame's updates (re-read the ref, not `current`)
             const state = stateRef.current!;
             drawGame(ctx, state, gridLayer);
 
-            // Game over -> log the result and stop (no new frame scheduled)
+            // Game over -> tell the UI and stop (no new frame scheduled)
             if (state.status === 'game-over') {
-                console.log(state.winner === null ? 'Draw!' : `Bike ${state.winner} wins!`);
+                emit({ kind: 'over', winner: state.winner });
                 return;
             }
 
@@ -82,7 +103,7 @@ export default function GameCanvas() {
             cancelAnimationFrame(rafId);
             controllers.forEach((ctrl) => ctrl.dispose());
         }
-    }, []);
+    }, [mode]);
 
     return <canvas ref={canvasRef} className="block" />;
 }

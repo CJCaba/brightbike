@@ -13,4 +13,11 @@ export const BIKE_COLORS: Record<number, string> = {
   4: '#FFD740',
 };
 
+export const PLAYER_NAMES: Record<number, string> = {
+  1: 'Blue',
+  2: 'Red',
+  3: 'Green',
+  4: 'Yellow'
+};
+
 export const FALLBACK_TRAIL_COLOR = '#888'  // Any id without a color (e.g. test walls use id 9)
