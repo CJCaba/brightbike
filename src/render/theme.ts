@@ -23,3 +23,11 @@ export const PLAYER_NAMES: Record<number, string> = {
 };
 
 export const FALLBACK_TRAIL_COLOR = '#888'  // Any id without a color (e.g. test walls use id 9)
+
+/** Mix a #rrggbb color toward white by `amount` (0 = unchanged, 1 = white). */
+export function lighten(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c: number) => Math.round(c + (255 - c) * amount);
+  const r = mix((n >> 16) & 255), g = mix((n >> 8) & 255), b = mix(n & 255);
+  return `rgb(${r}, ${g}, ${b})`;
+}

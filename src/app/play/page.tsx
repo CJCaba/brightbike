@@ -1,5 +1,8 @@
+import type { Metadata } from 'next';
 import Game from '@/components/Game';
 import { parseDifficulty, parseFirstTo, parseMode } from '@/game/options';
+
+export const metadata: Metadata = { title: 'Play' };    // → "Play · BrightBike"
 
 // /play?mode=local&firstTo=3                → local 2-player
 // /play?mode=ai&difficulty=hard&firstTo=5   → you vs CPU (easy | medium | hard)

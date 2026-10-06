@@ -7,8 +7,13 @@ import Scoreboard from './Scoreboard';
 import type { Phase } from '@/game/phase';
 import type { Difficulty, FirstTo, GameMode } from '@/game/options';
 import { newMatch, recordRound } from '@/game/match';
+import { GRID_HEIGHT, GRID_WIDTH } from '@/engine/constants';
+import { sound } from '@/audio/sound';
 
 const INITIAL_PHASE: Phase = { kind: "countdown", n: 3 };
+
+// Largest arena that fits the viewport (minus scoreboard and margins), capped at 1200px
+const ARENA_WIDTH = `min(calc(100vw - 2rem), calc((100dvh - 7rem) * ${GRID_WIDTH / GRID_HEIGHT}), 1200px)`;
 
 interface Props {
     mode: GameMode;
@@ -59,8 +64,25 @@ export default function Game({ mode, difficulty, firstTo }: Props) {
         };
     }, [playing]);
 
+    // Sound: browsers only allow audio after a user gesture, so unlock on the first key or
+    // click (arriving from the menu already counts). M toggles mute at any time.
+    useEffect(() => {
+        sound.unlock();
+        const onKeyDown = (e: KeyboardEvent) => {
+            sound.unlock();
+            if (e.code === 'KeyM' && !e.repeat) sound.toggleMuted();
+        };
+        const onPointerDown = () => sound.unlock();
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('pointerdown', onPointerDown);
+        return () => {
+            window.removeEventListener('keydown', onKeyDown);
+            window.removeEventListener('pointerdown', onPointerDown);
+        };
+    }, []);
+
     return (
-        <div className="flex flex-col">
+        <div className="flex flex-col" style={{ width: ARENA_WIDTH }}>
             <Scoreboard mode={mode} match={match} />
             <div className="relative">
                 <GameCanvas

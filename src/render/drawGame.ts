@@ -1,23 +1,26 @@
 import type { GameState } from '@/engine/types';
-import { cellIndex } from '@/engine/collision'
 import { BIKE_COLORS, CELL_SIZE, COLORS, FALLBACK_TRAIL_COLOR } from './theme';
+import type { TrailLayer } from './trailLayer';
+import type { Effects } from './effects';
 
-const HEAD_GLOW_BLUR = 12;  // glow radius around each bike head (CSS px)
+const HEAD_GLOW_BLUR = 14;  // glow radius around each bike head (arena px)
 const HEAD_CORE_INSET = 2;  // white core is inset this much inside the head cell
-const TRAIL_INSET = 1;      // trails are drawn 1px smaller per side so the grid shows between cells
 
-/** Draw the static background grid ONCE into its own canvas (it never changes) */
-export function createGridLayer(width: number, height: number, dpr: number): HTMLCanvasElement {
+/**
+ * Draw the static background grid ONCE into its own canvas (it never changes).
+ * `scale` = device pixels per arena pixel (devicePixelRatio × display scale).
+ */
+export function createGridLayer(width: number, height: number, scale: number): HTMLCanvasElement {
     const cssWidth = width * CELL_SIZE;
     const cssHeight = height * CELL_SIZE;
 
     const canvas = document.createElement('canvas');
-    // Round: fractional DPRs (1.25, 1.5 on many Windows laptops) would otherwise be truncated
-    canvas.width = Math.round(cssWidth * dpr);
-    canvas.height = Math.round(cssHeight * dpr);
+    // Round: fractional scales (e.g. 1.25 DPR on many Windows laptops) would otherwise be truncated
+    canvas.width = Math.round(cssWidth * scale);
+    canvas.height = Math.round(cssHeight * scale);
 
     const ctx = canvas.getContext('2d')!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
     // Background
     ctx.fillStyle = COLORS.background;
@@ -42,27 +45,37 @@ export function createGridLayer(width: number, height: number, dpr: number): HTM
     return canvas;
 }
 
-/** Draw one frame. Pure: reads state, writes pixels, changes nothing else. */
-export function drawGame(ctx: CanvasRenderingContext2D, gameState: GameState, gridLayer: HTMLCanvasElement) {
-    // Draw Background (destination size in CSS px; ctx is already scaled by dpr)
-    ctx.drawImage(gridLayer, 0, 0, gameState.width * CELL_SIZE, gameState.height * CELL_SIZE);
+export interface Layers {
+    grid: HTMLCanvasElement;
+    trails: TrailLayer;
+}
 
-    // Draw Trails: every non-zero grid cell -> colored square, inset so the grid shows through
-    for (let y = 0; y < gameState.height; y++) {
-        for (let x = 0; x < gameState.width; x++) {
-            const owner = gameState.grid[cellIndex(gameState.width, {x, y})];
-            if (owner === 0) continue;
-            ctx.fillStyle = BIKE_COLORS[owner] ?? FALLBACK_TRAIL_COLOR;
-            ctx.fillRect(
-                x * CELL_SIZE + TRAIL_INSET,
-                y * CELL_SIZE + TRAIL_INSET,
-                CELL_SIZE - TRAIL_INSET * 2,
-                CELL_SIZE - TRAIL_INSET * 2,
-            );
-        }
-    }
+/**
+ * Draw one frame. Reads state, writes pixels, changes nothing else.
+ * Coordinates are arena pixels; the caller's transform maps them to the canvas.
+ */
+export function drawGame(
+    ctx: CanvasRenderingContext2D,
+    gameState: GameState,
+    layers: Layers,
+    effects: Effects,
+    shake: { x: number; y: number },
+) {
+    const w = gameState.width * CELL_SIZE;
+    const h = gameState.height * CELL_SIZE;
 
-    // Draw Bikes: a glowing full-cell head with a white core on each ALIVE bike's pos
+    // Background first, so screen shake never reveals stale pixels at the edges
+    ctx.fillStyle = COLORS.background;
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.translate(shake.x, shake.y);
+
+    // Grid and trails: prebuilt layers (destination size in arena px)
+    ctx.drawImage(layers.grid, 0, 0, w, h);
+    ctx.drawImage(layers.trails.canvas, 0, 0, w, h);
+
+    // Bikes: a glowing full-cell head with a white core on each ALIVE bike's pos
     for (const bike of gameState.bikes) {
         if (!bike.alive) continue;
 
@@ -85,4 +98,7 @@ export function drawGame(ctx: CanvasRenderingContext2D, gameState: GameState, gr
             CELL_SIZE - HEAD_CORE_INSET * 2,
         );
     }
+
+    effects.draw(ctx);
+    ctx.restore();
 }

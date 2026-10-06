@@ -107,21 +107,21 @@ export default function Hud(props: Props) {
 
 function Countdown({ n, round, mode, difficulty }: { n: number; round: number; mode: GameMode; difficulty: Difficulty }) {
     return (
-        <div className="flex flex-col items-center gap-5">
-            <p className="text-xs uppercase tracking-[0.6em] text-white/60">
+        <div className="flex flex-col items-center gap-3 px-4 text-center sm:gap-5">
+            <p className="text-[10px] uppercase tracking-[0.35em] text-white/60 sm:text-xs sm:tracking-[0.6em]">
                 {mode === 'ai' ? `Vs CPU · ${difficulty}` : 'Get ready'} · Round {round}
             </p>
 
             {/* key={n} remounts the number each second, which restarts the pop animation */}
             <p
                 key={n}
-                className="text-9xl font-bold tabular-nums text-white motion-safe:animate-[hud-pop_1s_ease-out_both]"
+                className="text-7xl font-bold tabular-nums text-white motion-safe:animate-[hud-pop_1s_ease-out_both] sm:text-9xl"
                 style={{ textShadow: glow(COLORS.border) }}
             >
                 {n}
             </p>
 
-            <div className="flex gap-8 text-xs uppercase tracking-[0.3em]">
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-1 text-[10px] uppercase tracking-[0.3em] sm:text-xs">
                 {controlsFor(mode, difficulty).map(({ id, label, keys }) => (
                     <span key={id} style={{ color: BIKE_COLORS[id] }}>
                         {label} <span className="text-white/70">{keys}</span>
@@ -149,13 +149,13 @@ function Panel({ eyebrow, title, subtitle, color, action }: PanelProps) {
     return (
         <div className="absolute inset-0 flex items-center justify-center bg-black/55 backdrop-blur-[2px] motion-safe:animate-[hud-rise_300ms_ease-out_both]">
             <div
-                className="flex min-w-[420px] flex-col items-center gap-4 border border-[var(--accent)] bg-[#05070d]/85 px-14 py-9"
+                className="flex w-[min(460px,90%)] flex-col items-center gap-3 border border-[var(--accent)] bg-[#05070d]/85 px-6 py-6 text-center sm:gap-4 sm:px-12 sm:py-9"
                 style={{ ...accent, boxShadow: `0 0 28px -6px ${color}, inset 0 0 28px -14px ${color}` }}
             >
                 <p className="text-[11px] uppercase tracking-[0.5em] text-white/50">{eyebrow}</p>
                 <p
                     role="status"
-                    className="text-5xl font-bold uppercase tracking-[0.25em] text-[var(--accent)]"
+                    className="text-3xl font-bold uppercase tracking-[0.25em] text-[var(--accent)] sm:text-5xl"
                     style={{ textShadow: glow(color) }}
                 >
                     {title}

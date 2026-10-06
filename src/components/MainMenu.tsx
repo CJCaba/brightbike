@@ -27,12 +27,12 @@ export default function MainMenu() {
         <div className="flex w-full max-w-3xl flex-col items-center gap-10 px-6 py-10 font-mono">
             <header className="flex flex-col items-center gap-3 text-center">
                 <h1
-                    className="text-5xl font-bold uppercase tracking-[0.3em] text-white sm:text-6xl"
+                    className="text-3xl font-bold uppercase tracking-[0.2em] text-white sm:text-6xl sm:tracking-[0.3em]"
                     style={{ textShadow: glow(COLORS.accent) }}
                 >
                     BrightBike
                 </h1>
-                <p className="text-xs uppercase tracking-[0.5em] text-white/50">Last rider on the grid wins</p>
+                <p className="text-[11px] uppercase tracking-[0.3em] text-white/50 sm:text-xs sm:tracking-[0.5em]">Last rider on the grid wins</p>
             </header>
 
             <div className="grid w-full gap-6 sm:grid-cols-2">
