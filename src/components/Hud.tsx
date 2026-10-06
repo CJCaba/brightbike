@@ -1,19 +1,39 @@
 import type { CSSProperties } from 'react';
 import type { Phase } from '@/game/phase';
+import type { Difficulty, GameMode } from '@/game/options';
 import { BIKE_COLORS, COLORS, FALLBACK_TRAIL_COLOR, PLAYER_NAMES } from '@/render/theme';
 
 interface Props {
     phase: Phase;
+    mode: GameMode;
+    difficulty: Difficulty;
     onRematch: () => void;
 }
 
 const DRAW_COLOR = '#e6fbff';
 
-// Controls shown under the countdown (local mode: P1 = WASD, P2 = arrows)
-const CONTROLS = [
-    { id: 1, keys: 'W A S D' },
-    { id: 2, keys: '↑ ← ↓ →' },
-];
+/** Per-player label + controls hint shown under the countdown. */
+function controlsFor(mode: GameMode, difficulty: Difficulty) {
+    switch (mode) {
+        case 'local':
+            return [
+                { id: 1, label: PLAYER_NAMES[1], keys: 'W A S D' },
+                { id: 2, label: PLAYER_NAMES[2], keys: '↑ ← ↓ →' },
+            ];
+        case 'ai':
+            return [
+                { id: 1, label: 'You', keys: 'WASD / ↑←↓→' },
+                { id: 2, label: 'CPU', keys: difficulty },
+            ];
+    }
+}
+
+/** Game-over headline. In AI mode the human is always player 1. */
+function resultTitle(mode: GameMode, winner: number | null): string {
+    if (winner === null) return 'Draw';
+    if (mode === 'ai') return winner === 1 ? 'You win' : 'CPU wins';
+    return `${PLAYER_NAMES[winner] ?? `Player ${winner}`} wins`;
+}
 
 // Keyframes for the Tailwind arbitrary animations below. React 19 hoists this
 // <style> into <head> and de-duplicates it by `href`, so it's only added once.
@@ -33,23 +53,25 @@ const ANIMATIONS = `
 /** Layered neon text glow in the given color */
 const glow = (color: string) => `0 0 6px ${color}, 0 0 20px ${color}, 0 0 44px ${color}`;
 
-export default function Hud({ phase, onRematch }: Props) {
+export default function Hud({ phase, mode, difficulty, onRematch }: Props) {
     if (phase.kind === 'playing') return null;
 
     return (
         <div className="pointer-events-none absolute inset-0 flex select-none items-center justify-center font-mono">
             <style href="brightbike-hud" precedence="default">{ANIMATIONS}</style>
             {phase.kind === 'countdown'
-                ? <Countdown n={phase.n} />
-                : <GameOver winner={phase.winner} onRematch={onRematch} />}
+                ? <Countdown n={phase.n} mode={mode} difficulty={difficulty} />
+                : <GameOver title={resultTitle(mode, phase.winner)} winner={phase.winner} onRematch={onRematch} />}
         </div>
     );
 }
 
-function Countdown({ n }: { n: number }) {
+function Countdown({ n, mode, difficulty }: { n: number; mode: GameMode; difficulty: Difficulty }) {
     return (
         <div className="flex flex-col items-center gap-5">
-            <p className="text-xs uppercase tracking-[0.6em] text-white/60">Get ready</p>
+            <p className="text-xs uppercase tracking-[0.6em] text-white/60">
+                {mode === 'ai' ? `Vs CPU · ${difficulty}` : 'Get ready'}
+            </p>
 
             {/* key={n} remounts the number each second, which restarts the pop animation */}
             <p
@@ -61,9 +83,9 @@ function Countdown({ n }: { n: number }) {
             </p>
 
             <div className="flex gap-8 text-xs uppercase tracking-[0.3em]">
-                {CONTROLS.map(({ id, keys }) => (
+                {controlsFor(mode, difficulty).map(({ id, label, keys }) => (
                     <span key={id} style={{ color: BIKE_COLORS[id] }}>
-                        {PLAYER_NAMES[id]} <span className="text-white/70">{keys}</span>
+                        {label} <span className="text-white/70">{keys}</span>
                     </span>
                 ))}
             </div>
@@ -71,10 +93,9 @@ function Countdown({ n }: { n: number }) {
     );
 }
 
-function GameOver({ winner, onRematch }: { winner: number | null; onRematch: () => void }) {
+function GameOver({ title, winner, onRematch }: { title: string; winner: number | null; onRematch: () => void }) {
     const isDraw = winner === null;
     const color = isDraw ? DRAW_COLOR : (BIKE_COLORS[winner] ?? FALLBACK_TRAIL_COLOR);
-    const title = isDraw ? 'Draw' : `${PLAYER_NAMES[winner] ?? `Player ${winner}`} wins`;
     const subtitle = isDraw ? 'Both riders derezzed' : 'Last rider on the grid';
 
     // One CSS variable drives the border, text, hover and focus colors, so Tailwind

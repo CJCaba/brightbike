@@ -2,7 +2,8 @@
 
 import { useEffect, useEffectEvent, useRef } from 'react';
 import type { Phase } from '@/game/phase';
-import { createControllers, type GameMode } from '@/game/modes'
+import { createControllers } from '@/game/modes';
+import type { Difficulty, GameMode } from '@/game/options';
 import { createGame, startGame } from '@/engine/createGame';
 import type { GameState } from '@/engine/types';
 import { GRID_WIDTH, GRID_HEIGHT, TICKS_PER_SECOND } from '@/engine/constants';
@@ -13,10 +14,11 @@ import { collectInputs } from '@/controllers/Controller';
 
 interface Props {
     mode: GameMode;
+    difficulty: Difficulty;
     onPhaseChange: (phase: Phase) => void;
 }
 
-export default function GameCanvas({ mode, onPhaseChange }: Props) {
+export default function GameCanvas({ mode, difficulty, onPhaseChange }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const stateRef = useRef<GameState | null>(null);
     const emit = useEffectEvent((phase: Phase) => {
@@ -46,7 +48,7 @@ export default function GameCanvas({ mode, onPhaseChange }: Props) {
         const gridLayer = createGridLayer(GRID_WIDTH, GRID_HEIGHT, dpr);
 
         // 4. Controllers - created INSIDE the effect so cleanup can dispose exactly these
-        const controllers = createControllers(mode);
+        const controllers = createControllers(mode, difficulty);
 
         // 5. Fixed-timestep loop
         const STEP_MS = 1000 / TICKS_PER_SECOND;
@@ -103,7 +105,7 @@ export default function GameCanvas({ mode, onPhaseChange }: Props) {
             cancelAnimationFrame(rafId);
             controllers.forEach((ctrl) => ctrl.dispose());
         }
-    }, [mode]);
+    }, [mode, difficulty]);     // primitives only: an object here would restart the game every render
 
     return <canvas ref={canvasRef} className="block" />;
 }

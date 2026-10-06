@@ -6,23 +6,24 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   {
-    files: ["src/engine/**/*.{ts,tsx}"],
+    // Engine + AI: pure, deterministic TypeScript (runs in tests, browser, or a future server)
+    files: ["src/engine/**/*.{ts,tsx}", "src/ai/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [{
           regex: "^(react|react-dom|next)(/|$)|(^|/)(components|render|controllers|app)(/|$)",
-          message: "The engine must stay pure TypeScript (no React/Next/UI imports).",
+          message: "The engine and AI must stay pure TypeScript (no React/Next/UI imports).",
         }],
       }],
       "no-restricted-globals": ["error", "window", "document", "requestAnimationFrame", "performance"],
       "no-restricted-properties": ["error",
         {
           object: "Math", property: "random",
-          message: "Engine must be deterministic — use a seeded PRNG stored in state.",
+          message: "Engine and AI must be deterministic — use a seeded PRNG (src/ai/rng.ts).",
         },
         {
           object: "Date", property: "now",
-          message: "Engine must be deterministic — time comes from the tick counter.",
+          message: "Engine and AI must be deterministic — time comes from the tick counter.",
         },
       ],
     },

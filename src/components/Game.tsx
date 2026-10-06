@@ -4,10 +4,16 @@ import { useState } from 'react';
 import GameCanvas from './GameCanvas';
 import Hud from './Hud'
 import type { Phase } from '@/game/phase';
+import type { Difficulty, GameMode } from '@/game/options';
 
 const INITIAL_PHASE: Phase = { kind: "countdown", n: 3 };
 
-export default function Game() {
+interface Props {
+    mode: GameMode;
+    difficulty: Difficulty;
+}
+
+export default function Game({ mode, difficulty }: Props) {
     const [round, setRound] = useState(0);
     const [phase, setPhase] = useState<Phase>(INITIAL_PHASE);
 
@@ -18,8 +24,8 @@ export default function Game() {
 
     return (
         <div className="relative">
-            <GameCanvas key={round} mode="local" onPhaseChange={setPhase} />
-            <Hud phase={phase} onRematch={rematch} />
+            <GameCanvas key={round} mode={mode} difficulty={difficulty} onPhaseChange={setPhase} />
+            <Hud phase={phase} mode={mode} difficulty={difficulty} onRematch={rematch} />
         </div>
     )
 }

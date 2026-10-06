@@ -1,17 +1,22 @@
 import type { Controller } from '@/controllers/Controller';
 import { KeyboardController } from '@/controllers/KeyboardController';
-import { ARROWS, WASD } from '@/controllers/keymaps'
+import { AIController } from '@/controllers/AIController';
+import { ARROWS, SOLO, WASD } from '@/controllers/keymaps';
+import { easy, hard, medium, type Strategy } from '@/ai/strategies';
+import { mulberry32 } from '@/ai/rng';
+import type { Difficulty, GameMode } from './options';
 
-export type GameMode = 'local' | 'online' | 'ai';
-export function createControllers(mode: GameMode): Controller[] {
+const STRATEGIES: Record<Difficulty, Strategy> = { easy, medium, hard };
+
+/** Build the controller list for a game. Player 1 is always a human. */
+export function createControllers(mode: GameMode, difficulty: Difficulty, seed = Date.now()): Controller[] {
     switch (mode) {
         case 'local':
             return [new KeyboardController(1, WASD), new KeyboardController(2, ARROWS)];
-        case 'online':
-            // Implementation for online mode
-            return [];
         case 'ai':
-            // Implementation for AI mode
-            return [];
+            return [
+                new KeyboardController(1, SOLO),    // solo: WASD or arrows both work
+                new AIController(2, STRATEGIES[difficulty], mulberry32(seed)),
+            ];
     }
 }
