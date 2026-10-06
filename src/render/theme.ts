@@ -4,6 +4,8 @@ export const COLORS = {
   background: '#05070d',
   gridLine:   'rgba(0, 229, 255, 0.06)',
   border:     'rgba(0, 229, 255, 0.5)',
+  accent:     '#00e5ff',    // UI highlight (menus, pause)
+  neutral:    '#e6fbff',    // UI text for draws / non-player states
 } as const;
 
 export const BIKE_COLORS: Record<number, string> = {

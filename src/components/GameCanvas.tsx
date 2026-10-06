@@ -15,15 +15,18 @@ import { collectInputs } from '@/controllers/Controller';
 interface Props {
     mode: GameMode;
     difficulty: Difficulty;
+    paused: boolean;
     onPhaseChange: (phase: Phase) => void;
 }
 
-export default function GameCanvas({ mode, difficulty, onPhaseChange }: Props) {
+export default function GameCanvas({ mode, difficulty, paused, onPhaseChange }: Props) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const stateRef = useRef<GameState | null>(null);
     const emit = useEffectEvent((phase: Phase) => {
         onPhaseChange(phase);
     });
+    // Read the latest `paused` prop from inside the loop without restarting the effect
+    const isPaused = useEffectEvent(() => paused);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -53,7 +56,9 @@ export default function GameCanvas({ mode, difficulty, onPhaseChange }: Props) {
         // 5. Fixed-timestep loop
         const STEP_MS = 1000 / TICKS_PER_SECOND;
         const COUNTDOWN_MS = 3000;
-        const startAt = performance.now() + COUNTDOWN_MS;
+        // Set from the FIRST frame's timestamp, not performance.now() here: rAF timestamps
+        // can be earlier than "now" in this effect, which made the countdown briefly show 4.
+        let startAt = -1;
         const MAX_FRAME_MS = 250;
         let shownCount = 0;                                 // Last countdown number sent to the UI
         let last = performance.now();
@@ -61,9 +66,18 @@ export default function GameCanvas({ mode, difficulty, onPhaseChange }: Props) {
         let rafId = 0;
 
         const frame = (now: number) => {
+            // Paused: no ticks, keep the clock current so resuming doesn't fast-forward.
+            // The canvas keeps showing the last frame drawn.
+            if (isPaused()) {
+                last = now;
+                rafId = requestAnimationFrame(frame);
+                return;
+            }
+
             const current = stateRef.current!;
             if (current.status === 'waiting') {
                 // Countdown: no ticks, just time
+                if (startAt < 0) startAt = now + COUNTDOWN_MS;
                 const remaining = Math.ceil((startAt - now) / 1000);
                 if (remaining <= 0) {
                     stateRef.current = startGame(current);
